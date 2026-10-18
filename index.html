@@ -2,7 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b101b">
+<meta name="description" content="Simple video editor: trim, join, add text and music, export. Works offline.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Video Studio">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>NYANSATEK Video Studio</title>
 <style>
 :root{--bg:#0b101b;--panel:#121a2a;--panel2:#18223a;--line:#26324d;--text:#e8ecf3;--mute:#98a3b8;--gold:#d4a017;--goldink:#241a00;--ok:#3ecf8e;--bad:#ff6b6b;--vid:#3a6fd8;--img:#2f9e8f;--txt:#b4569a;--mus:#c9852b}
@@ -86,6 +95,46 @@ select{max-width:100%}
 #drop{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(212,160,23,.18);border:3px dashed var(--gold);font-size:22px;z-index:60;pointer-events:none}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:#000c;border:1px solid var(--line);padding:6px 14px;border-radius:8px;z-index:70;display:none;max-width:80vw}
 @media (max-width:1100px){#app{grid-template-columns:200px minmax(0,1fr) 250px}}
+
+.clip,#ruler,#cv{touch-action:none}
+#mnav{display:none}
+@media (pointer:coarse){.clip .hl,.clip .hr{width:18px}.clip .hl{background:rgba(255,255,255,.18)}.clip .hr{background:rgba(255,255,255,.18)}}
+@media (max-width:820px),(max-height:520px){
+  html,body{height:auto;min-height:100%}
+  body{display:block;overflow:auto;font-size:14px;padding-bottom:calc(58px + env(safe-area-inset-bottom));-webkit-text-size-adjust:100%}
+  header{height:auto;flex-wrap:wrap;gap:6px 8px;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;position:sticky;top:0;z-index:40}
+  header h1{font-size:14px}header .sp{display:none}
+  #pname{flex:1;min-width:120px;width:auto}
+  header label{font-size:12px}
+  .btn{min-height:38px;padding:6px 12px}.btn.sm{min-height:36px;padding:5px 10px}
+  select,input[type=number],input[type=text],textarea{font-size:16px;min-height:36px}
+  #app{display:block;padding:6px;height:auto}
+  #prev{position:sticky;top:var(--hh,90px);z-index:30;height:36vh;min-height:190px;margin-bottom:8px;box-shadow:0 6px 14px rgba(0,0,0,.5)}
+  #stageWrap{padding:4px}
+  #bar{flex-wrap:wrap;gap:6px;padding:5px 8px}#bar .time{min-width:0;font-size:12px}
+  #bar label{display:none}
+  #tl{height:290px;margin-bottom:8px}
+  #tlBar{gap:5px;padding:5px 8px}
+  #tlWrap{grid-template-columns:46px minmax(0,1fr)}
+  #labels div{font-size:9px;letter-spacing:0}
+  .clip .lb{font-size:10.5px}
+  #bin,#insp{display:none;position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));height:48vh;z-index:45;border-radius:14px 14px 0 0;box-shadow:0 -8px 24px rgba(0,0,0,.6);margin:0}
+  body[data-sheet=media] #bin{display:flex}
+  body[data-sheet=edit] #insp{display:flex}
+  #mnav{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--panel);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));gap:8px}
+  #mnav button{flex:1;min-height:42px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:600}
+  #mnav button.on{background:var(--gold);border-color:var(--gold);color:var(--goldink)}
+  #mnav button.dot::after{content:" ●";color:var(--gold)}#mnav button.on.dot::after{color:var(--goldink)}
+  .mi{padding:7px}.mi .add{min-width:44px}
+  .r{grid-template-columns:84px 1fr 44px}
+  input[type=range]{height:28px}
+  .ov{padding:8px;align-items:flex-end}
+  .mbox{width:100%;border-radius:14px 14px 10px 10px}
+  #toast{bottom:calc(70px + env(safe-area-inset-bottom));max-width:92vw;text-align:center}
+  #empty{padding:20px 10px}
+}
+@media (max-height:520px) and (orientation:landscape){#prev{height:56vh}#tl{height:230px}#bin,#insp{height:62vh}}
+@media (max-width:820px),(max-height:520px){#pname{display:none}header h1{font-size:13px}}
 </style>
 </head>
 <body>
@@ -98,6 +147,7 @@ select{max-width:100%}
   <span class="sp"></span>
   <label style="color:var(--mute)">Shape <select id="sRatio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:5</option><option>4:3</option></select></label>
   <label style="color:var(--mute)">Quality <select id="sRes"><option value="480">480p</option><option value="720" selected>720p</option><option value="1080">1080p</option></select></label>
+  <button class="btn" id="bInstall" style="display:none;background:#1b2a1f;border-color:#2f6b46">Install app</button>
   <button class="btn pri" id="bExport">Export video</button>
 </header>
 <div id="app">
@@ -140,6 +190,7 @@ select{max-width:100%}
     </div>
   </section>
 </div>
+<nav id="mnav"><button id="nMedia">Media</button><button id="nEdit">Edit</button><button id="nClose">Hide panel</button></nav>
 <div id="drop">Drop videos, photos or music here</div>
 <div id="toast"></div>
 <script>
@@ -643,6 +694,8 @@ function renderInsp(){
 }
 function projectInsp(B){
   const nm=h('div',{class:'hint',text:'Pick a clip, text or music bar on the timeline to edit it. These settings are for the whole video.'});B.append(nm);
+  const pn=h('input',{type:'text',value:P.name,maxlength:60});pn.oninput=()=>{P.name=pn.value;$('pname').value=pn.value;autosave();};pn.onchange=()=>commit();
+  B.append(sec('Video name'),rowEl('Name',pn));
   B.append(sec('Look'));
   B.append(colorEl('Background',()=>P.bg,v=>{P.bg=v;}));
   B.append(sec('Photos (used when you add new photos)'));
@@ -728,9 +781,10 @@ async function exportVideo(){
   box.innerHTML=`<h2>Making your video</h2><p>It plays through once in real time while being recorded. Please keep this tab open and visible. You will hear it play.</p><div class="prog"><i id="xp"></i></div><p class="tiny" id="xt">Starting…</p><div class="mbtn"><button class="btn" id="xc">Cancel</button></div>`;
   ov.append(box);document.body.append(ov);
   let cancelled=false,timer=0;
-  const cleanup=()=>{clearInterval(timer);S.exporting=false;S.exp=null;if(MON)MON.gain.value=1;S.onEnd=null;stopPlay();S.dirty=true;};
+  const cleanup=()=>{clearInterval(timer);try{if(S.wl){S.wl.release();S.wl=null;}}catch(e){}S.exporting=false;S.exp=null;if(MON)MON.gain.value=1;S.onEnd=null;stopPlay();S.dirty=true;};
   box.querySelector('#xc').onclick=()=>{cancelled=true;cleanup();try{if(rec.state!=='inactive')rec.stop();}catch(e){}ov.remove();};
   S.exporting=true;S.exp={cv:cvx,x};if(MON)MON.gain.value=0;
+  try{if(navigator.wakeLock)S.wl=await navigator.wakeLock.request('screen');}catch(e){}
   S.t=0;S.dirty=true;
   await new Promise(r=>setTimeout(r,700)); // let the first frames load
   if(cancelled)return;
@@ -800,6 +854,15 @@ addEventListener('keydown',e=>{
 });
 addEventListener('resize',()=>{renderTL();S.dirty=true;});
 addEventListener('beforeunload',e=>{if(S.exporting){e.preventDefault();e.returnValue='';}});
+
+/* ---- phone layout: bottom tabs open the media list or the editing panel */
+function setSheet(v){document.body.dataset.sheet=v||'';$('nMedia').classList.toggle('on',v==='media');$('nEdit').classList.toggle('on',v==='edit');}
+$('nMedia').onclick=()=>setSheet(document.body.dataset.sheet==='media'?'':'media');
+$('nEdit').onclick=()=>setSheet(document.body.dataset.sheet==='edit'?'':'edit');
+$('nClose').onclick=()=>setSheet('');
+function navDot(){$('nEdit').classList.toggle('dot',!!S.sel);}
+setInterval(navDot,300);
+(function(){const hd=document.querySelector('header');const f=()=>document.documentElement.style.setProperty('--hh',hd.offsetHeight+'px');if(window.ResizeObserver)new ResizeObserver(f).observe(hd);addEventListener('resize',f);f();})();
 S.snap=true;$('bSnap').classList.add('on');S.dirty=true;
 (async function init(){
   try{
@@ -809,6 +872,18 @@ S.snap=true;$('bSnap').classList.add('on');S.dirty=true;
   setZoom();histReset();relayout();renderAll();requestAnimationFrame(tick);
 })();
 
+
+/* ---- app install + offline */
+(function(){
+  let dip=null;const btn=$('bInstall');
+  const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  addEventListener('beforeinstallprompt',e=>{e.preventDefault();dip=e;if(!standalone())btn.style.display='';});
+  addEventListener('appinstalled',()=>{btn.style.display='none';dip=null;});
+  btn.onclick=async()=>{if(dip){dip.prompt();try{await dip.userChoice;}catch(e){}dip=null;btn.style.display='none';}};
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  if(ios&&!standalone()){btn.style.display='';btn.onclick=()=>ask('Install on iPhone / iPad','<p>In Safari, tap the <b>Share</b> button, then <b>Add to Home Screen</b>.</p>',[{l:'OK',cls:'pri'}]);}
+  if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol))addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+})();
 </script>
 </body>
 </html>
